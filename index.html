@@ -7,19 +7,23 @@
   <body>
 	<script>
 		//ALTEZZA 12
-		const DEBUG = false;
+		const DEBUG = true;
 	    const level = PIXI.Texture.from('01-01.png');
 		let app = new PIXI.Application({ width: 640, height: DEBUG?460 : 230 });
 		document.body.appendChild(app.view);
+
+		const container = new PIXI.Container();
+		app.stage.addChild(container);	
 		let levelSprite =  new PIXI.Sprite(level);
+		container.addChild(levelSprite);
 		let sprite =  new PIXI.Sprite(getMarioTexture("NORMAL","STAND",1));
-		app.stage.addChild(levelSprite);
-		app.stage.addChild(sprite);
+		container.addChild(sprite);
 		// Add a variable to count up the seconds our demo has been running
 		let elapsed = 0.0;
 		// Tell our application's ticker to run a new callback every frame, passing
 		// in the amount of time that has passed since the last tick
 		let frame = 1;
+		app.stage.fixed = [];
 		app.stage.enemies = [];
 		app.stage.transients = [];
 		sprite.x = 100;
@@ -32,7 +36,7 @@
 		sprite.gridX = Math.round(sprite.x /16);
 		sprite.startJump = false;
 		sprite.elapsedJump = 0;
-		levelSprite.startGridX = 0;
+		container.startGridX = 0;
 		arrowRight = false;
 		arrowLeft = false;
 		document.addEventListener('keydown', keyDown)
@@ -40,8 +44,8 @@
 		let debugLevel = new PIXI.Graphics();
 		if (DEBUG){
 			debugLevel.beginFill(0xff0000);
-			debugLevel.drawRect(0, 230, 640, 230);
-			app.stage.addChild(debugLevel);
+			debugLevel.drawRect(0, 230, 200*61, 230);
+			container.addChild(debugLevel);
 		}
 		app.ticker.maxFPS = 35;
 		app.ticker.add((delta) => {
@@ -52,23 +56,23 @@
 
 			if (DEBUG){
 				console.log("X:"+sprite.gridX+",Y:"+sprite.bottom);
-				console.log("startgridX:"+levelSprite.startGridX);
+				console.log("startgridX:"+container.startGridX);
 				debugLevel.clear();
 				debugLevel.beginFill(0xff0000);
-				debugLevel.drawRect(0, 230, 640, 230);
+				debugLevel.drawRect(0, 230, 200*61, 230);
 				
 			}
 			
 			//schermo è 40 griglia di larghezza
 			//controllo se ci sono nemici
-			for (let i= levelSprite.startGridX;i<levelSprite.startGridX+40;i++){
+			for (let i= container.startGridX;i<container.startGridX+40;i++){
 				const arrVert = levelOne[i];
 				if (!arrVert)
 					continue;
 				arrVert.forEach((item,y)=>{
 					if (item && DEBUG){
 						debugLevel.beginFill(0xffffff);
-						debugLevel.drawRect((i-levelSprite.startGridX)*16,440-y*16,16,16)
+						debugLevel.drawRect((i)*16,440-y*16,16,16)
 					}
 					if (item && item.isEnemy && !item.isOnScreen){
 						const enemySprite = new PIXI.Sprite(getEnemyTexture(item.type,0));
@@ -80,10 +84,10 @@
 						enemySprite.y = 180;
 						enemySprite.speedX = 0.5;
 						enemySprite.speedY = 0;
-						enemySprite.levelPosition = {x:enemySprite.x-levelSprite.x,y:enemySprite.y};
+						enemySprite.levelPosition = {x:enemySprite.x-container.x,y:enemySprite.y};
 						item.isOnScreen = true;
 						item.id = id;
-						app.stage.addChild(enemySprite);
+						container.addChild(enemySprite);
 					}
 				});
 			}
@@ -98,13 +102,13 @@
 				
 				let newvalue  = enemy.sprite.x + delta *  enemy.sprite.speedX;
 				let scarto = newvalue  - enemy.sprite.x;
-				if (levelSprite.startGridX+Math.round(newvalue /16) > levelOne.length-1 || levelSprite.startGridX+Math.round(newvalue /16) < 0  )
+				if (Math.round(newvalue /16) > levelOne.length-1 || Math.round(newvalue /16) < 0  )
 				{
 					enemy.isDead = true;
 					app.stage.removeChild(enemy.sprite);
 					return;
 				}
-				const block = levelOne[levelSprite.startGridX+Math.round(newvalue /16)][enemy.sprite.bottom];
+				const block = levelOne[Math.round(newvalue /16)][enemy.sprite.bottom];
 				if (block && block.id != enemy.id && block.isSolid){
 					
 					 enemy.sprite.speedX *= -1;
@@ -118,9 +122,8 @@
 					const bloccoSotto = levelOne[enemy.sprite.gridX][enemy.sprite.bottom-1];
 					if((!bloccoSotto || !bloccoSotto.isSolid))
 						enemy.sprite.speedY = 4;
-					enemy.sprite.levelPosition.x += scarto;
-					enemy.sprite.x = enemy.sprite.levelPosition.x + levelSprite.x;
-					const newgridX = levelSprite.startGridX+ Math.round(enemy.sprite.x /16);
+					enemy.sprite.x += scarto;
+					const newgridX = Math.round(enemy.sprite.x /16);
 					if (enemy.sprite.gridX!==newgridX)
 					{
 						const old = levelOne[enemy.sprite.gridX][enemy.sprite.bottom];
@@ -155,15 +158,14 @@
 				let scarto = newvalue  - enemy.sprite.y;
 					enemy.sprite.levelPosition.y += scarto;
 					enemy.sprite.y = enemy.sprite.levelPosition.y + levelSprite.y;
-					const newgridX = levelSprite.startGridX+ Math.round(enemy.sprite.x /16);
+					const newgridX = container.startGridX+ Math.round(enemy.sprite.x /16);
 			});
 			//console.log("X:"+sprite.x+",Y:"+sprite.y);
-			//100 - 560 bounds per spostamento schermo
 			if (levelOne.gameOver){
 				const basicText = new PIXI.Text('GAME OVER');
 				basicText.x = 300;
 				basicText.y = 50;
-				app.stage.addChild(basicText);
+				container.addChild.addChild(basicText);
 				app.ticker.stop();
 			}
 			//IPOTESI CORPO LIBERO: imprimo velocità verticale se "sotto" non c'è nulla
@@ -171,30 +173,31 @@
 			if((!bloccoSotto || !bloccoSotto.isSolid) && !sprite.startJump)
 				sprite.speedY = 4;
 			//----------------------------------------
+			//100 - 560 bounds per spostamento schermo
 			if (sprite.speedX!==0){
 				let newvalue  = sprite.x + delta *  sprite.speedX;
-				const nextBlock = levelOne[levelSprite.startGridX+Math.round(newvalue /16)][sprite.bottom]
+				const nextBlock = levelOne[Math.round((newvalue) /16)][sprite.bottom]
 				if (nextBlock && nextBlock.isSolid){
 					sprite.speedX = 0;
 				}
 				else {
 					let scarto = newvalue - sprite.x;
-					if (newvalue>560){
-						levelSprite.x -= (newvalue-560);
-						levelSprite.startGridX = Math.round(-levelSprite.x / 16);
-						newvalue = 560;
-						levelSprite.isScrolling = true;
+					if (newvalue+container.x>560){
+						container.x -= (scarto);
+						container.startGridX = Math.round(-container.x / 16);
+						//newvalue = 560;
+						container.isScrolling = true;
 					}
-					else if (newvalue<100){
-						levelSprite.x += (100-newvalue);
-						levelSprite.startGridX = Math.round(-levelSprite.x / 16);
-						newvalue = 100;
-						levelSprite.isScrolling = true;
+					else if (newvalue+container.x<100){
+						container.x -= scarto;
+						container.startGridX = Math.round(-container.x / 16);
+						//newvalue = 100;
+						container.isScrolling = true;
 					}
-					else levelSprite.isScrolling = false;
+					else container.isScrolling = false;
 					sprite.levelPosition.x += scarto;
 					sprite.x = newvalue;
-					sprite.gridX = levelSprite.startGridX+ Math.round(sprite.x /16);
+					sprite.gridX = Math.round(sprite.x /16);
 					// levelOne[sprite.gridX][sprite.bottom] = {type:"MARIO"};
 					// levelOne[sprite.gridX][sprite.top] = {type:"MARIO"};
 					
@@ -264,18 +267,20 @@
 							const objectSprite = new PIXI.Sprite(getOtherTexture("RING"));
 							const id = Date.now();
 							app.stage.transients.push({sprite:objectSprite,type:"RING",id:id});
-							objectSprite.y = (newTop+3) * 16;
-							objectSprite.top = newTop+3;
-							objectSprite.bottom = newTop+3;
+							objectSprite.y = (12-newTop) * 16;
+							objectSprite.top = newTop
+							objectSprite.bottom = newTop;
 							objectSprite.x = sprite.gridX * 16;
 							objectSprite.speedY = -2;
-							objectSprite.levelPosition = {x:objectSprite.x-levelSprite.x,y:objectSprite.y};
-							app.stage.addChild(objectSprite);
+							objectSprite.levelPosition = {x:objectSprite.x-container.x,y:objectSprite.y};
+							container.addChild(objectSprite);
 							if (bloccoSopra.quantity===0){
 								const objectSprite = new PIXI.Sprite(getOtherTexture("ENDQUESTION"));
-								objectSprite.y = (newTop+4) * 16 + 8;
+								objectSprite.y = (12-newTop) * 16 + 8;
 								objectSprite.x = sprite.gridX * 16;
-								app.stage.addChild(objectSprite);
+								objectSprite.levelPosition = {x:objectSprite.x-container.x,y:objectSprite.y};
+								app.stage.fixed.push({sprite:objectSprite});
+								container.addChild(objectSprite);
 							}
 							break;
 					}
