@@ -2,18 +2,19 @@
 var levelOne =  new Array([]);
 
 
-for(let row = 0;row<100;row++){
+levelOne[0][2] = {type:"HARDBLOCK",isSolid:true};
+for(let row = 0;row<210;row++){
 	levelOne.push([]);
 	levelOne[row][0] = {type:"HARDBLOCK",isSolid:true};
 	levelOne[row][1] = {type:"HARDBLOCK",isSolid:true};
 }
 
 
-levelOne[16][5] = {type:"QUESTIONRING",quantity:5};
+levelOne[16][5] = {type:"QUESTIONRING",quantity:5,isSolid:true};
 levelOne[20][5] = {type:"SOFTBLOCK",isSolid:true};
-levelOne[21][5] = {type:"QUESTIONMUSHROOM"};
+levelOne[21][5] = {type:"QUESTIONMUSHROOM",isSolid:true};
 levelOne[22][5] = {type:"SOFTBLOCK",isSolid:true};
-levelOne[22][9] = {type:"QUESTIONRING",quantity:5};
+levelOne[22][9] = {type:"QUESTIONRING",quantity:5,isSolid:true};
 levelOne[23][5] = {type:"QUESTIONRING",quantity:5};
 levelOne[24][5] = {type:"SOFTBLOCK",isSolid:true};
 

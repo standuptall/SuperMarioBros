@@ -7,9 +7,9 @@
   <body>
 	<script>
 		//ALTEZZA 12
-		const DEBUG = true;
+		const DEBUG = false;
 	    const level = PIXI.Texture.from('01-01.png');
-		let app = new PIXI.Application({ width: 640, height: 460 });
+		let app = new PIXI.Application({ width: 640, height: DEBUG?460 : 230 });
 		document.body.appendChild(app.view);
 		let levelSprite =  new PIXI.Sprite(level);
 		let sprite =  new PIXI.Sprite(getMarioTexture("NORMAL","STAND",1));
@@ -21,8 +21,10 @@
 		// in the amount of time that has passed since the last tick
 		let frame = 1;
 		app.stage.enemies = [];
+		app.stage.transients = [];
 		sprite.x = 100;
 		sprite.y = 168;
+		sprite.levelPosition = {x:sprite.x,y:sprite.y};
 		sprite.speedY = 0;
 		sprite.bottom = Math.round((184-sprite.y) /16)+1;
 		sprite.top = Math.round((184-sprite.y) /16)+2;
@@ -31,24 +33,10 @@
 		sprite.startJump = false;
 		sprite.elapsedJump = 0;
 		levelSprite.startGridX = 0;
-		document.addEventListener('keydown', (e)=>{
-			if (sprite.speedX===0){
-				if (e.code.includes("ArrowRight"))
-					sprite.speedX = 2;
-				if (e.code.includes("ArrowLeft"))
-					sprite.speedX = -2;
-			}
-			if (e.code.includes("Space") && !sprite.startJump){//salta
-				sprite.elapsedJump = 0;
-				sprite.speedY = -4;
-				sprite.startJump = true;
-				sprite.startJumpFrom = sprite.y;
-			}
-		})
-		document.addEventListener('keyup', (e)=>{
-			if (e.code.includes("ArrowRight") ||e.code.includes("ArrowLeft"))
-				sprite.speedX = 0;
-		})
+		arrowRight = false;
+		arrowLeft = false;
+		document.addEventListener('keydown', keyDown)
+		document.addEventListener('keyup', keyUp)
 		let debugLevel = new PIXI.Graphics();
 		if (DEBUG){
 			debugLevel.beginFill(0xff0000);
@@ -57,6 +45,11 @@
 		}
 		app.ticker.maxFPS = 35;
 		app.ticker.add((delta) => {
+			if (arrowLeft)
+				keyDown({code:"ArrowLeft"});
+			if (arrowRight)
+				keyDown({code:"ArrowRight"});
+
 			if (DEBUG){
 				console.log("X:"+sprite.gridX+",Y:"+sprite.bottom);
 				console.log("startgridX:"+levelSprite.startGridX);
@@ -86,6 +79,8 @@
 						enemySprite.bottom = 2;
 						enemySprite.y = 180;
 						enemySprite.speedX = 0.5;
+						enemySprite.speedY = 0;
+						enemySprite.levelPosition = {x:enemySprite.x-levelSprite.x,y:enemySprite.y};
 						item.isOnScreen = true;
 						item.id = id;
 						app.stage.addChild(enemySprite);
@@ -102,6 +97,7 @@
 				enemy.sprite.texture = getEnemyTexture(enemy.type,enemy.frame,enemy.sprite.speedX)
 				
 				let newvalue  = enemy.sprite.x + delta *  enemy.sprite.speedX;
+				let scarto = newvalue  - enemy.sprite.x;
 				if (levelSprite.startGridX+Math.round(newvalue /16) > levelOne.length-1 || levelSprite.startGridX+Math.round(newvalue /16) < 0  )
 				{
 					enemy.isDead = true;
@@ -118,7 +114,12 @@
 					
 				}
 				else {
-					enemy.sprite.x = newvalue;
+					//IPOTESI CORPO LIBERO: imprimo velocità verticale se "sotto" non c'è nulla
+					const bloccoSotto = levelOne[enemy.sprite.gridX][enemy.sprite.bottom-1];
+					if((!bloccoSotto || !bloccoSotto.isSolid))
+						enemy.sprite.speedY = 4;
+					enemy.sprite.levelPosition.x += scarto;
+					enemy.sprite.x = enemy.sprite.levelPosition.x + levelSprite.x;
 					const newgridX = levelSprite.startGridX+ Math.round(enemy.sprite.x /16);
 					if (enemy.sprite.gridX!==newgridX)
 					{
@@ -127,10 +128,35 @@
 						enemy.sprite.gridX = newgridX;
 						levelOne[enemy.sprite.gridX][enemy.sprite.bottom] = old;
 					}
+					if (enemy.sprite.speedY!==0){
+						if (enemy.sprite.bottom < -5)
+							enemy.isDead = true;
+						const newvalue  = enemy.sprite.y + delta *  enemy.sprite.speedY;
+						const newBottom = Math.round((184-newvalue) /16) + 1;
+						const newTop = Math.round((184-newvalue) /16) + 2;
+						const blockBottom = levelOne[enemy.sprite.gridX][newBottom];
+						if ((blockBottom && blockBottom.isSolid) ){
+							enemy.sprite.speedY = 0;
+							enemy.sprite.bottom = newBottom;
+							enemy.sprite.top = newTop;
+							enemy.sprite.y = 184 - (sprite.bottom) * 16;
+						}
+						else {
+							enemy.sprite.y = newvalue;
+						}
+					}
 				}
 				
 			});
-			
+			//controllo animazioni altri oggetti effimeri
+			app.stage.transients = app.stage.transients.filter(c=>(!c.isDead));
+			app.stage.transients.forEach(enemy=>{
+				let newvalue  = enemy.sprite.y + delta *  enemy.sprite.speedY;
+				let scarto = newvalue  - enemy.sprite.y;
+					enemy.sprite.levelPosition.y += scarto;
+					enemy.sprite.y = enemy.sprite.levelPosition.y + levelSprite.y;
+					const newgridX = levelSprite.startGridX+ Math.round(enemy.sprite.x /16);
+			});
 			//console.log("X:"+sprite.x+",Y:"+sprite.y);
 			//100 - 560 bounds per spostamento schermo
 			if (levelOne.gameOver){
@@ -141,15 +167,18 @@
 				app.ticker.stop();
 			}
 			//IPOTESI CORPO LIBERO: imprimo velocità verticale se "sotto" non c'è nulla
-			if(!levelOne[sprite.gridX][sprite.bottom-2] && !sprite.startJump)
+			const bloccoSotto = levelOne[sprite.gridX][sprite.bottom-1];
+			if((!bloccoSotto || !bloccoSotto.isSolid) && !sprite.startJump)
 				sprite.speedY = 4;
 			//----------------------------------------
 			if (sprite.speedX!==0){
 				let newvalue  = sprite.x + delta *  sprite.speedX;
-				if (levelOne[levelSprite.startGridX+Math.round(newvalue /16)][sprite.bottom]){
+				const nextBlock = levelOne[levelSprite.startGridX+Math.round(newvalue /16)][sprite.bottom]
+				if (nextBlock && nextBlock.isSolid){
 					sprite.speedX = 0;
 				}
 				else {
+					let scarto = newvalue - sprite.x;
 					if (newvalue>560){
 						levelSprite.x -= (newvalue-560);
 						levelSprite.startGridX = Math.round(-levelSprite.x / 16);
@@ -163,8 +192,11 @@
 						levelSprite.isScrolling = true;
 					}
 					else levelSprite.isScrolling = false;
+					sprite.levelPosition.x += scarto;
 					sprite.x = newvalue;
 					sprite.gridX = levelSprite.startGridX+ Math.round(sprite.x /16);
+					// levelOne[sprite.gridX][sprite.bottom] = {type:"MARIO"};
+					// levelOne[sprite.gridX][sprite.top] = {type:"MARIO"};
 					
 				}
 			}
@@ -176,16 +208,19 @@
 				const newvalue  = sprite.y + delta *  sprite.speedY;
 				const newBottom = Math.round((184-newvalue) /16) + 1;
 				const newTop = Math.round((184-newvalue) /16) + 2;
-				if (levelOne[sprite.gridX][newBottom] || levelOne[sprite.gridX][newTop] ){
+				const blockTop = levelOne[sprite.gridX][newBottom];
+				const blockBottom = levelOne[sprite.gridX][newTop];
+				if ((blockTop && blockTop.isSolid) || (blockBottom && blockBottom.isSolid) ){
 					sprite.speedY = 0;
 					sprite.bottom = newBottom;
 					sprite.top = newTop;
-					sprite.y = ((12-sprite.bottom) * 16)-5;
-					console.log(sprite.y);
+					sprite.y = 184 - (sprite.bottom) * 16;
 				}
 				else {
 					sprite.y = newvalue;
 				}
+				// levelOne[sprite.gridX][sprite.bottom] = {type:"MARIO"};
+				// levelOne[sprite.gridX][sprite.top] = {type:"MARIO"};
 			}
 			//----------------------------------------
 			frame++;
@@ -206,18 +241,92 @@
 				const newvalue = sprite.y  + (sprite.speedY*delta/40)
 				const newBottom = Math.round((184-newvalue) /16) + 1;
 				const newTop = Math.round((184-newvalue) /16) + 2;
-				if (levelOne[sprite.gridX][newTop-1]){
+				let bloccoSopra = levelOne[sprite.gridX][newTop+1];
+				let bloccoSotto = levelOne[sprite.gridX][newBottom-1];
+				if (sprite.bottom!==newBottom && bloccoSotto){ // fine jump perché c'è qualcosa sotto
+					switch(bloccoSotto.type){
+						case "GOOMBA": /*ammazzo*/ break;
+						case "KOOPA": /*ammazzo*/ break;
+						default: if (bloccoSotto.isSolid){
+							sprite.speedY = 0;
+							sprite.startJump = false;
+							sprite.bottom = newBottom;
+							sprite.y = 184 - (sprite.bottom-1) * 16;
+						}
+					}
+					
+				} else if (sprite.top!==newTop && bloccoSopra && bloccoSopra.isSolid){ //fine jump per blocco duro
+					switch(bloccoSopra.type){
+						case "QUESTIONRING": 
+							if (bloccoSopra.quantity===0)
+								return;
+							bloccoSopra.quantity--;
+							const objectSprite = new PIXI.Sprite(getOtherTexture("RING"));
+							const id = Date.now();
+							app.stage.transients.push({sprite:objectSprite,type:"RING",id:id});
+							objectSprite.y = (newTop+3) * 16;
+							objectSprite.top = newTop+3;
+							objectSprite.bottom = newTop+3;
+							objectSprite.x = sprite.gridX * 16;
+							objectSprite.speedY = -2;
+							objectSprite.levelPosition = {x:objectSprite.x-levelSprite.x,y:objectSprite.y};
+							app.stage.addChild(objectSprite);
+							if (bloccoSopra.quantity===0){
+								const objectSprite = new PIXI.Sprite(getOtherTexture("ENDQUESTION"));
+								objectSprite.y = (newTop+4) * 16 + 8;
+								objectSprite.x = sprite.gridX * 16;
+								app.stage.addChild(objectSprite);
+							}
+							break;
+					}
 					sprite.speedY = 0;
 					sprite.startJump = false;
 				}
 				else {
 					sprite.y = newvalue;
 				}
-				sprite.texture = getMarioTexture("NORMAL","JUMP",frame);
+				sprite.texture = getMarioTexture("NORMAL","JUMP",2);
 			}
 			
-			sprite.bottom = Math.round((184-sprite.y) /16)+2;
+			sprite.bottom = Math.round((184-sprite.y) /16)+1;
 		});
+
+
+
+		function keyDown(e){
+			if (sprite.speedX===0){
+				if (e.code.includes("ArrowRight")){
+					sprite.speedX = 2;
+					arrowRight = true
+				}
+				if (e.code.includes("ArrowLeft")){
+					sprite.speedX = -2;
+					arrowLeft = true
+				}
+			}
+			if (e.code.includes("Space") && !sprite.startJump){//salta
+				sprite.elapsedJump = 0;
+				sprite.speedY = -5.5;
+				sprite.startJump = true;
+				sprite.startJumpFrom = sprite.y;
+			}
+		}
+		function keyUp(e){
+			if (e.code.includes("ArrowRight")){
+				sprite.speedX = 0;
+				arrowRight = !e.code.includes("ArrowRight") 
+			}
+			if (e.code.includes("ArrowLeft")){
+				sprite.speedX = 0;
+				arrowLeft = !e.code.includes("ArrowLeft") 
+			} 
+			
+			
+		}
 	</script>
+	<audio autoplay = "true">
+	<source src="01.mp3" type="audio/mpeg">
+	Your browser does not support the audio element.
+	</audio>
   </body>
 </html>
