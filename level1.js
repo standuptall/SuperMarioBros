@@ -38,23 +38,23 @@ levelOne[39][4] = {type:"PIPE",canEnter:true,isSolid:true };
 
 
 
-levelOne[46][2] = {type:"PIPE"};
-levelOne[46][3] = {type:"PIPE"};
-levelOne[46][4] = {type:"PIPE"};
-levelOne[46][5] = {type:"PIPE",canEnter:true};
-levelOne[47][2] = {type:"PIPE"};
-levelOne[47][3] = {type:"PIPE"};
-levelOne[47][4] = {type:"PIPE"};
-levelOne[47][5] = {type:"PIPE",canEnter:true};
+levelOne[46][2] = {type:"PIPE",isSolid:true};
+levelOne[46][3] = {type:"PIPE",isSolid:true};
+levelOne[46][4] = {type:"PIPE",isSolid:true};
+levelOne[46][5] = {type:"PIPE",canEnter:true,isSolid:true};
+levelOne[47][2] = {type:"PIPE",isSolid:true};
+levelOne[47][3] = {type:"PIPE",isSolid:true};
+levelOne[47][4] = {type:"PIPE",isSolid:true};
+levelOne[47][5] = {type:"PIPE",canEnter:true,isSolid:true};
 
-levelOne[57][2] = {type:"PIPE"};
-levelOne[57][3] = {type:"PIPE"};
-levelOne[57][4] = {type:"PIPE"};
-levelOne[57][5] = {type:"PIPE",canEnter:true};
-levelOne[58][2] = {type:"PIPE"};
-levelOne[58][3] = {type:"PIPE"};
-levelOne[58][4] = {type:"PIPE"};
-levelOne[58][5] = {type:"PIPE",canEnter:true};
+levelOne[57][2] = {type:"PIPE",isSolid:true};
+levelOne[57][3] = {type:"PIPE",isSolid:true};
+levelOne[57][4] = {type:"PIPE",isSolid:true};
+levelOne[57][5] = {type:"PIPE",canEnter:true,isSolid:true};
+levelOne[58][2] = {type:"PIPE",isSolid:true};
+levelOne[58][3] = {type:"PIPE",isSolid:true};
+levelOne[58][4] = {type:"PIPE",isSolid:true};
+levelOne[58][5] = {type:"PIPE",canEnter:true,isSolid:true};
 
 
 levelOne[64][6] = {type:"QUESTIONFIRE"};
