@@ -154,11 +154,43 @@
 			//controllo animazioni altri oggetti effimeri
 			app.stage.transients = app.stage.transients.filter(c=>(!c.isDead));
 			app.stage.transients.forEach(enemy=>{
-				let newvalue  = enemy.sprite.y + delta *  enemy.sprite.speedY;
-				let scarto = newvalue  - enemy.sprite.y;
-					enemy.sprite.levelPosition.y += scarto;
-					enemy.sprite.y = enemy.sprite.levelPosition.y + levelSprite.y;
-					const newgridX = container.startGridX+ Math.round(enemy.sprite.x /16);
+				//IPOTESI CORPO LIBERO TRANSIENT: imprimo velocità verticale se "sotto" non c'è nulla
+				const bloccoSotto = levelOne[enemy.sprite.gridX][enemy.sprite.bottom-1];
+				if((!bloccoSotto || !bloccoSotto.isSolid))
+					enemy.sprite.speedY = 2;
+				if (enemy.sprite.speedY!==0){
+					let newvalue  = enemy.sprite.y + delta *  enemy.sprite.speedY;
+					const newBottom = Math.round((184-newvalue) /16) + 1;
+					let scarto = newvalue  - enemy.sprite.y;
+					const blockDown = levelOne[enemy.sprite.gridX][newBottom];
+					enemy.sprite.y += scarto;
+					enemy.sprite.y = enemy.sprite.y + levelSprite.y;
+					const newgridY = Math.round((184-enemy.sprite.y) /16);
+					if (newgridY===enemy.targetPosition)
+					{
+						enemy.targetPosition = -100;
+						enemy.sprite.speedY = 0;
+						enemy.sprite.speedX=-0.5;
+					}
+					if (enemy.targetPosition===-100)
+					{
+						if (blockDown && blockDown.isSolid){
+							enemy.sprite.speedY = 0;
+							enemy.sprite.speedX=-0.5;
+							enemy.sprite.y += scarto;
+						}
+						else 
+							enemy.sprite.bottom  = newBottom;
+					}
+				}
+				if (enemy.sprite.speedX!==0){
+					let newvalue  = enemy.sprite.x + delta *  enemy.sprite.speedX;
+					let scarto = newvalue  - enemy.sprite.x;
+					
+					enemy.sprite.x += scarto;
+					enemy.sprite.x = enemy.sprite.x + levelSprite.x;
+				}
+				
 			});
 			//console.log("X:"+sprite.x+",Y:"+sprite.y);
 			if (levelOne.gameOver){
@@ -275,6 +307,28 @@
 							objectSprite.levelPosition = {x:objectSprite.x-container.x,y:objectSprite.y};
 							container.addChild(objectSprite);
 							if (bloccoSopra.quantity===0){
+								const objectSprite = new PIXI.Sprite(getOtherTexture("ENDQUESTION"));
+								objectSprite.y = (12-newTop) * 16 + 8;
+								objectSprite.x = sprite.gridX * 16;
+								objectSprite.levelPosition = {x:objectSprite.x-container.x,y:objectSprite.y};
+								app.stage.fixed.push({sprite:objectSprite});
+								container.addChild(objectSprite);
+							}
+							break;
+						case "QUESTIONMUSHROOM":
+							if (!bloccoSopra.empty)
+							{
+								const mushroom = new PIXI.Sprite(getOtherTexture("MUSHROOM"));
+								mushroom.y = (12-newTop) * 16;
+								mushroom.top = newTop-2
+								mushroom.bottom = newTop-2;
+								mushroom.gridX = sprite.gridX;
+								mushroom.x = sprite.gridX * 16;
+								mushroom.speedY = -0.1;
+								mushroom.speedX = 0;
+								container.addChild(mushroom);
+								app.stage.transients.push({sprite:mushroom,targetPosition:newTop+1});
+								bloccoSopra.empty  =true;
 								const objectSprite = new PIXI.Sprite(getOtherTexture("ENDQUESTION"));
 								objectSprite.y = (12-newTop) * 16 + 8;
 								objectSprite.x = sprite.gridX * 16;

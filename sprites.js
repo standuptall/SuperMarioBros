@@ -7,7 +7,7 @@ const blocks = PIXI.Texture.from('blocks.png');
 function getOtherTexture(type){
 	switch(type){
 		case "RING":return getOtherTextureCoords(0,0);
-		case "MUSHROOM":return getOtherTextureCoords(0,1);
+		case "MUSHROOM":return getOtherTextureCoords(1,0);
 		case "STAR":return getOtherTextureCoords(0,2);
 		case "ENDQUESTION":return getBlocksTextureCoords(0,0);
 	}
@@ -60,7 +60,7 @@ function getEnemyTextureCoords(x,y){
 }
 function getOtherTextureCoords(x,y){
 	//16x24, 7 pixel spazio altezza, 14 pizel spazio larghezza
-	const ret = new PIXI.Rectangle((x),y,16,16);
+	const ret = new PIXI.Rectangle((x*16),y,16,16);
 	return new PIXI.Texture(others,ret);
 }
 function getBlocksTextureCoords(x,y){
